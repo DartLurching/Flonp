@@ -1,0 +1,39 @@
+---
+title: FLONP Documentation
+description: Documentation hub for FLONP, an AI-powered web application for optimizing Lipid Nanoparticle synthesis using microfluidic technology.
+template: splash
+hero:
+  tagline: AI-powered LNP formulation optimization platform documentation
+  image:
+    file: ../../assets/houston.webp
+  actions:
+    - text: Get Started
+      link: /getting-started/introduction/
+      icon: right-arrow
+    - text: View Architecture
+      link: /architecture/system-architecture/
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Explore the Documentation
+
+<CardGrid stagger>
+	<Card title="Introduction" icon="rocket">
+		Learn what FLONP is and how it helps optimize LNP synthesis. [Read the Introduction](/getting-started/introduction/)
+	</Card>
+	<Card title="Domain Context" icon="information">
+		Understand the scientific foundation of LNP formulation and microfluidics. [Learn the Science](/getting-started/domain-context/)
+	</Card>
+	<Card title="System Architecture" icon="laptop">
+		Explore the React frontend, FastAPI backend, and AI integration layers. [View Architecture](/architecture/system-architecture/)
+	</Card>
+	<Card title="Development Setup" icon="setting">
+		Get your local development environment up and running. [Setup Guide](/guides/development-setup/)
+	</Card>
+	<Card title="API Reference" icon="open-book">
+		Complete API documentation with request/response schemas. [API Specification](/reference/api-specification/)
+	</Card>
+</CardGrid>

@@ -1,0 +1,461 @@
+---
+title: Frontend Architecture
+description: React frontend architecture for the LNP Formulation Optimizer, covering component structure, state management, form handling, validation, and API integration.
+---
+
+## Overview
+
+This document describes the React frontend architecture for FLONP. It covers component structure, state management, form handling, and how the UI communicates with the backend.
+
+---
+
+## Component Tree
+```
+App
+ │
+ ├── Header
+ │     └── Logo + Title
+ │
+ ├── FormulationForm
+ │     ├── OrganicPhaseSection
+ │     │     ├── LipidCompositionSelect
+ │     │     ├── LipidConcentrationInput
+ │     │     └── SolventTypeDisplay (read-only)
+ │     │
+ │     ├── AqueousPhaseSection
+ │     │     ├── PayloadTypeSelect
+ │     │     ├── PayloadConcentrationInput
+ │     │     └── BufferTypeSelect
+ │     │
+ │     ├── ProcessTargetSection
+ │     │     └── NpRatioInput
+ │     │
+ │     └── SubmitButton
+ │
+ ├── LoadingState (conditional)
+ │
+ ├── ErrorDisplay (conditional)
+ │
+ └── ResultsCard (conditional)
+       ├── FlowParametersSection
+       │     ├── FlowRateRatio
+       │     └── TotalFlowRate
+       │
+       ├── PredictionsSection
+       │     ├── ParticleSize
+       │     ├── PDI
+       │     └── EncapsulationEfficiency
+       │
+       ├── PostProcessSection
+       │
+       └── ReasoningSection
+```
+
+---
+
+## Directory Structure
+```
+src/
+├── components/
+│   ├── ui/                        # shadcn/ui components
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── form.tsx
+│   │   ├── input.tsx
+│   │   ├── label.tsx
+│   │   └── select.tsx
+│   │
+│   ├── Header.tsx                 # App header with logo/title
+│   ├── FormulationForm.tsx        # Main form component
+│   ├── ResultsCard.tsx            # Displays AI recommendations
+│   ├── LoadingSpinner.tsx         # Loading indicator
+│   └── ErrorDisplay.tsx           # Error message display
+│
+├── lib/
+│   ├── api.ts                     # API client functions
+│   ├── utils.ts                   # shadcn/ui cn() utility
+│   └── schemas.ts                 # Zod validation schemas
+│
+├── types/
+│   └── formulation.ts             # TypeScript types and constants
+│
+├── App.tsx                        # Root component
+├── main.tsx                       # Entry point
+└── index.css                      # Tailwind imports
+```
+
+---
+
+## State Management
+
+FLONP uses minimal state management. No Redux or Zustand required.
+
+| State | Type | Initial | Description |
+|-------|------|---------|-------------|
+| `result` | `FormulationResult \| null` | `null` | API response data |
+| `error` | `string \| null` | `null` | Error message to display |
+| `isLoading` | `boolean` | `false` | Loading state during API call |
+
+Form state is managed internally by React Hook Form.
+
+### State Location
+
+| State | Location | Manager |
+|-------|----------|---------|
+| Form values | `FormulationForm` | React Hook Form |
+| Form errors | `FormulationForm` | React Hook Form + Zod |
+| Loading state | `App` | `useState` |
+| API result | `App` | `useState` |
+| API error | `App` | `useState` |
+
+### State Flow
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         App.tsx                                 │
+│                                                                 │
+│   const [result, setResult] = useState<FormulationResult | null>│
+│   const [error, setError] = useState<string | null>             │
+│   const [isLoading, setIsLoading] = useState(false)             │
+│                                                                 │
+│   ┌─────────────────────────────────────────────────────────┐   │
+│   │                  FormulationForm                        │   │
+│   │                                                         │   │
+│   │   Form state managed by React Hook Form                 │   │
+│   │   Validation managed by Zod                             │   │
+│   │                                                         │   │
+│   │   onSubmit={(data) => {                                 │   │
+│   │     setIsLoading(true)                                  │   │
+│   │     optimizeFormulation(data)                           │   │
+│   │       .then(setResult)                                  │   │
+│   │       .catch(setError)                                  │   │
+│   │       .finally(() => setIsLoading(false))               │   │
+│   │   }}                                                    │   │
+│   └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│   {isLoading && <LoadingSpinner />}                             │
+│   {error && <ErrorDisplay message={error} />}                   │
+│   {result && <ResultsCard result={result} />}                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Component Specifications
+
+### App.tsx
+
+**Purpose:** Root component that orchestrates application state and layout.
+
+**Location:** `src/App.tsx`
+
+**State:**
+
+| State | Type | Initial | Description |
+|-------|------|---------|-------------|
+| `result` | `FormulationResult \| null` | `null` | API response data |
+| `error` | `string \| null` | `null` | Error message to display |
+| `isLoading` | `boolean` | `false` | Loading state during API call |
+
+**Behavior:**
+- Renders `Header`, `FormulationForm`, and conditionally renders `LoadingSpinner`, `ErrorDisplay`, or `ResultsCard`
+- Passes `handleSubmit` callback to `FormulationForm`
+- Clears previous result/error when new submission starts
+- Catches API errors and sets appropriate error message
+
+**Dependencies:**
+- All child components
+- `optimizeFormulation` from `lib/api.ts`
+
+---
+
+### Component: FormulationForm.tsx
+
+**Purpose:** Three-section form for collecting formulation parameters.
+
+**Location:** `src/components/FormulationForm.tsx`
+
+**Props:**
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `onSubmit` | `(data: FormulationInput) => void` | Yes | Callback when form is valid and submitted |
+| `isLoading` | `boolean` | Yes | Disables form during API call |
+
+**Form Fields:**
+
+| Section | Field | Type | Default | Validation |
+|---------|-------|------|---------|------------|
+| Organic Phase | Lipid Composition | Select | Empty (placeholder) | Required, enum |
+| Organic Phase | Lipid Concentration | Number input | Empty | 10.0–50.0 mM |
+| Organic Phase | Solvent | Disabled input | "Ethanol 99%" | Fixed value |
+| Aqueous Phase | Payload Type | Select | Empty (placeholder) | Required, enum |
+| Aqueous Phase | Payload Concentration | Number input | Empty | 0.05–1.0 mg/mL |
+| Aqueous Phase | Buffer Type | Select | Empty (placeholder) | Required, enum |
+| Process Target | N/P Ratio | Number input | Empty | 4–20, integer |
+
+**Behavior:**
+- Uses React Hook Form for form state management
+- Uses Zod schema for validation via `@hookform/resolvers`
+- Uses React Hook Form with Zod resolver for validation
+- Dropdowns show placeholder text until user selects an option
+- Number inputs are empty until user enters a value
+- Displays inline validation errors below each field
+- Disables submit button when loading or form is invalid
+- Converts string inputs to numbers before submission
+- Groups fields into three visual sections
+
+**Dependencies:**
+- React Hook Form
+- `@hookform/resolvers/zod`
+- Zod schema from `lib/schemas.ts`
+- Constants from `types/formulation.ts`
+- shadcn/ui: Button, Card, Input, Select, Form, Label
+
+---
+
+### Component: ResultsCard.tsx
+
+**Purpose:** Display AI-generated formulation recommendations.
+
+**Location:** `src/components/ResultsCard.tsx`
+
+**Display Sections:**
+
+| Section | Fields |
+|---------|--------|
+| Flow Parameters | Flow Rate Ratio (formatted as "X:1"), Total Flow Rate (with "mL/min" unit) |
+| Predicted Characteristics | Particle Size (nm), PDI, Encapsulation Efficiency (%) |
+| Post-Processing Instructions | Full text from `postProcess` |
+| Scientific Reasoning | Full text from `reasoning` |
+
+**Dependencies:**
+- shadcn/ui: Card
+
+**Props:**
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `result` | `FormulationResult` | Yes | API response data to display |
+
+**Behavior:**
+- Renders flow parameters, predictions, post-processing instructions, and reasoning
+- Uses Card component for visual grouping
+- Formats numerical values with appropriate units
+
+---
+
+### Component: LoadingSpinner.tsx
+
+**Purpose:** Visual indicator during API call.
+
+**Location:** `src/components/LoadingSpinner.tsx`
+
+**Props:** None
+
+**Behavior:**
+- Displays centered spinning animation
+- Visible only when `isLoading` is true in App
+
+---
+
+### Component: ErrorDisplay.tsx
+
+**Purpose:** Display error messages with dismiss option.
+
+**Location:** `src/components/ErrorDisplay.tsx`
+
+**Props:**
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `message` | `string` | Yes | Error message to display |
+| `onDismiss` | `() => void` | Yes | Callback to clear error |
+
+**Behavior:**
+- Displays error message with red styling
+- Dismiss button clears the error state in App
+
+**Dependencies:**
+- shadcn/ui: Button, Card
+
+---
+
+### Component: Header
+
+**Purpose:** Application header with branding.
+
+**Location:** `src/components/Header.tsx`
+
+**Props:** None
+
+**Content:**
+- App title: "FLONP"
+- Subtitle: "LNP Formulation Optimizer"
+
+---
+
+## Form Validation
+
+### Zod Schema Location
+
+`src/lib/schemas.ts`
+
+### Validation Rules
+
+| Field | Rules | Error Message |
+|-------|-------|---------------|
+| `lipidComposition` | Required, must be one of enum values | "Required" |
+| `lipidConcentration` | Required, number, min 10.0, max 50.0 | "Must be between 10.0 and 50.0 mM" |
+| `solventType` | Must be "Ethanol 99%" | — |
+| `payloadType` | Required, must be one of enum values | "Required" |
+| `payloadConcentration` | Required, number, min 0.05, max 1.0 | "Must be between 0.05 and 1.0 mg/mL" |
+| `bufferType` | Required, must be one of enum values | "Required" |
+| `targetNpRatio` | Required, integer, min 4, max 20 | "Must be between 4 and 20" |
+
+### Validation Flow
+```
+User types in field
+       │
+       ▼
+React Hook Form captures value
+       │
+       ▼
+On blur or submit: Zod validates
+       │
+       ├─── Valid ──────▶ Clear field error
+       │
+       └─── Invalid ────▶ Set field error
+                               │
+                               ▼
+                         FormMessage displays error
+```
+
+### Validation Timing
+
+- Validation runs on blur and on submit
+- Errors display inline below each field via `FormMessage` component
+
+---
+
+## API Integration
+
+### API Client Location
+
+`src/lib/api.ts`
+
+### Functions
+
+| Function | Purpose |
+|----------|---------|
+| `optimizeFormulation(input: FormulationInput): Promise<FormulationResult>` | Calls POST /optimize |
+
+### Responsibilities
+
+- Convert camelCase (frontend) to snake_case (API request)
+- Convert snake_case (API response) to camelCase (frontend)
+- Handle timeout (30 seconds)
+- Throw `ApiRequestError` with status and message on failure
+
+### Error Handling
+
+| HTTP Status | Error Type | User Message |
+|-------------|------------|--------------|
+| 422 | Validation | "Validation error" |
+| 500 | Server | "Failed to generate recommendation. Please try again." |
+| 504 | Timeout | "Request timed out. Please try again." |
+| Network failure | Connection | "Unable to connect to server." |
+
+---
+
+## Types Location
+
+`src/types/formulation.ts`
+
+### Contents
+
+- Const arrays for dropdown options (`LIPID_COMPOSITIONS`, `PAYLOAD_TYPES`, `BUFFER_TYPES`)
+- Derived union types (`LipidComposition`, `PayloadType`, `BufferType`)
+- `FormulationInput` interface (request)
+- `FormulationResult` interface (response)
+- `ApiError` interface
+
+---
+
+## UI Flow
+```
+1. User opens app
+   └── Form displayed with empty fields, dropdowns show placeholders
+
+2. User fills form
+   └── Validation runs on blur, errors appear inline if invalid
+
+3. User clicks "Calculate"
+   ├── If form invalid → Show validation errors, stop
+   └── If form valid → Continue
+
+4. API call starts
+   ├── isLoading = true
+   ├── Previous result/error cleared
+   ├── Form disabled
+   └── LoadingSpinner displayed
+
+5. API responds
+   ├── Success (200) → ResultsCard displayed with data
+   ├── Error (4xx/5xx) → ErrorDisplay shown with message
+   └── Timeout → ErrorDisplay shown with timeout message
+
+6. isLoading = false
+   └── Form re-enabled
+```
+
+---
+
+
+
+## Styling Approach
+
+### Tailwind CSS Classes
+
+All styling uses Tailwind utility classes. No custom CSS files except `index.css` for Tailwind import.
+```css
+/* src/index.css */
+@import "tailwindcss";
+```
+
+### shadcn/ui Components
+
+Pre-built components provide consistent styling:
+- `Button` — form submission
+- `Card` — section containers
+- `Input` — text/number fields
+- `Select` — dropdown fields
+- `Label` — field labels
+- `Form` — form wrapper with context
+
+---
+
+## File Dependencies
+```
+App.tsx
+├── components/Header.tsx
+├── components/FormulationForm.tsx
+│     ├── components/ui/button.tsx
+│     ├── components/ui/card.tsx
+│     ├── components/ui/input.tsx
+│     ├── components/ui/select.tsx
+│     ├── components/ui/form.tsx
+│     ├── lib/schemas.ts
+│     │     └── types/formulation.ts
+│     └── types/formulation.ts
+├── components/ResultsCard.tsx
+│     ├── components/ui/card.tsx
+│     └── types/formulation.ts
+├── components/LoadingSpinner.tsx
+├── components/ErrorDisplay.tsx
+│     ├── components/ui/button.tsx
+│     └── components/ui/card.tsx
+├── lib/api.ts
+│     └── types/formulation.ts
+└── types/formulation.ts
+```

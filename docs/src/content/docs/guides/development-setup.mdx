@@ -1,0 +1,390 @@
+---
+title: Development Setup
+description: Step-by-step guide to set up the FLONP development environment, including prerequisites, dependencies, and local server configuration.
+---
+
+## Overview
+
+This guide walks you through setting up the FLONP development environment from scratch. By the end, you will have both frontend and backend running locally and communicating with each other.
+
+---
+
+## Prerequisites
+
+Before starting, ensure you have the following installed on your machine.
+
+### Required Software
+
+| Tool | Version | Check Command | Installation |
+|------|---------|---------------|--------------|
+| **Git** | latest | `git --version` | https://git-scm.com/downloads |
+| **Node.js** | 24.11.1 LTS | `node --version` | https://nodejs.org/ |
+| **pnpm** | 10.x | `pnpm --version` | See below |
+| **Python** | 3.10 | `python --version` | https://www.python.org/downloads/ |
+| **uv** | 0.9.15 | `uv --version` | See below |
+
+### Installing pnpm
+
+After installing Node.js, install pnpm globally:
+```bash
+npm install -g pnpm@10
+```
+
+Verify installation:
+```bash
+pnpm --version
+# Expected: 10.x.x
+```
+
+### Installing uv
+
+**macOS / Linux:**
+```bash
+curl -LsSf https://astral.sh/uv/0.9.15/install.sh | sh
+```
+
+**Windows (PowerShell 7):**
+```powershell
+irm https://astral.sh/uv/0.9.15/install.ps1 | iex
+```
+
+Verify installation:
+```bash
+uv --version
+# Expected: uv 0.9.15
+```
+
+> **Note:** After installing uv, you may need to restart your terminal or add uv to your PATH manually.
+
+### Anthropic API Key
+
+You need your own Anthropic API key to run the backend.
+
+1. Go to https://console.anthropic.com/
+2. Create an account (or sign in)
+3. Navigate to **API Keys**
+4. Click **Create Key**
+5. Copy the key (starts with `sk-ant-...`)
+6. Save it securely — you'll need it during backend setup
+
+> **Cost Note:** Claude 3.5 Haiku is billed per token. For development, expect costs under $1/day with normal usage. Monitor your usage at https://console.anthropic.com/usage.
+
+---
+
+## Repository Setup
+
+### Clone the Repository
+```bash
+git clone <repository-url>
+cd flonp
+```
+
+### Directory Structure
+
+After cloning, you should see:
+```
+flonp/
+├── frontend/          # React application
+├── backend/           # FastAPI application
+├── docs/              # Documentation
+├── package.json       # Root workspace configuration
+├── pnpm-workspace.yaml
+└── README.md
+```
+
+---
+
+## Workspace Setup
+
+FLONP uses pnpm workspaces to manage both frontend and backend from the root directory.
+
+### 1. Install Root Dependencies
+
+From the repository root:
+```bash
+pnpm install
+```
+
+This installs dependencies for:
+- Root workspace (development scripts)
+- Frontend (React application)
+
+### 2. Workspace Configuration Files
+
+**`pnpm-workspace.yaml`** (already in repo)
+```yaml
+packages:
+  - 'frontend'
+```
+
+> **Note:** Backend is not a pnpm package (it's Python), but we run it via pnpm scripts using `uv run`.
+
+**Root `package.json`** (already in repo)
+```json
+{
+  "name": "flonp",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm run --parallel dev:frontend dev:backend",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "uv run --directory backend uvicorn app.main:app --reload --port 8000",
+    "build": "pnpm --filter frontend build"
+  }
+}
+```
+
+---
+
+## Backend Setup
+
+### 1. Navigate to Backend Directory
+```bash
+cd backend
+```
+
+### 2. Create Python Virtual Environment
+```bash
+uv venv --python 3.10
+```
+
+This creates a `.venv` directory.
+
+### 3. Install Dependencies
+```bash
+uv pip install -r requirements.txt
+```
+
+### 4. Create Environment File
+
+**macOS / Linux:**
+```bash
+cp .env.example .env
+```
+
+**Windows (PowerShell 7):**
+```powershell
+Copy-Item .env.example .env
+```
+
+Edit `.env` and add your Anthropic API key:
+```env
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+ALLOWED_ORIGINS=http://localhost:5173
+```
+
+> **Important:** Never commit `.env` to version control.
+
+### 5. Verify Backend Setup
+
+Start the development server:
+```bash
+uv run uvicorn app.main:app --reload --port 8000
+```
+
+You should see:
+```
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [xxxxx] using StatReload
+INFO:     Started server process [xxxxx]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+
+### 6. Test API Endpoint
+
+Open a new terminal and run:
+```bash
+curl http://localhost:8000/docs
+```
+
+Or open http://localhost:8000/docs in your browser to see the FastAPI automatic documentation.
+
+Press `Ctrl+C` to stop the server. We'll use workspace scripts going forward.
+
+---
+
+## Frontend Setup
+
+### 1. Navigate to Frontend Directory
+
+From the repository root:
+```bash
+cd frontend
+```
+
+### 2. Create Environment File
+
+**macOS / Linux:**
+```bash
+cp .env.example .env
+```
+
+**Windows (PowerShell 7):**
+```powershell
+Copy-Item .env.example .env
+```
+
+Edit `.env` to point to your local backend:
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+### 3. Verify Frontend Setup (Optional)
+
+You can test the frontend independently:
+```bash
+pnpm dev
+```
+
+You should see:
+```
+  VITE v7.2.x  ready in xxx ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+```
+
+Press `Ctrl+C` to stop. We'll use workspace scripts going forward.
+
+---
+
+## Running the Full Application
+
+### Start Both Services
+
+From the repository root:
+```bash
+pnpm dev
+```
+
+This runs both frontend and backend in parallel:
+- **Frontend:** http://localhost:5173
+- **Backend:** http://localhost:8000
+
+### Verify End-to-End Connection
+
+1. Open http://localhost:5173 in your browser
+2. Fill out the formulation form with test values
+3. Click "Calculate"
+4. You should see results appear (or an error if something is misconfigured)
+
+### Stop All Services
+
+Press `Ctrl+C` in the terminal running `pnpm dev`.
+
+---
+
+## Individual Service Commands
+
+If you need to run services separately (e.g., for debugging):
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start both frontend and backend |
+| `pnpm dev:frontend` | Start frontend only |
+| `pnpm dev:backend` | Start backend only |
+| `pnpm build` | Build frontend for production |
+
+### Running Backend Manually
+
+If you need more control over the backend:
+```bash
+cd backend
+uv run uvicorn app.main:app --reload --port 8000
+```
+
+---
+
+## After Pulling New Code
+
+If dependencies changed after a `git pull`:
+```bash
+# From repository root
+pnpm install                              # Frontend dependencies
+
+# Backend dependencies
+cd backend
+uv pip install -r requirements.txt
+```
+
+---
+
+## Troubleshooting
+
+### Backend Issues
+
+| Issue | Solution |
+|-------|----------|
+| `ModuleNotFoundError` | Run `uv pip install -r requirements.txt` in backend directory |
+| `ANTHROPIC_API_KEY not set` | Check `.env` file exists and has valid key |
+| Port 8000 already in use | macOS/Linux: `lsof -i :8000` then `kill <PID>`. Windows: `Get-Process -Id (Get-NetTCPConnection -LocalPort 8000).OwningProcess` then `Stop-Process -Id <PID>` |
+| `uv: command not found` | Restart terminal or add uv to PATH |
+| Python version mismatch | Use `uv venv --python 3.10` to create correct environment |
+
+### Frontend Issues
+
+| Issue | Solution |
+|-------|----------|
+| `pnpm: command not found` | Install pnpm: `npm install -g pnpm@10` |
+| Module not found errors | Run `pnpm install` from repository root |
+| Port 5173 already in use | Kill process or modify port in `vite.config.ts` |
+| Environment variables not loading | Restart dev server after changing `.env` |
+
+### Connection Issues
+
+| Issue | Solution |
+|-------|----------|
+| CORS errors in browser console | Verify `ALLOWED_ORIGINS` in backend `.env` includes `http://localhost:5173` |
+| "Network Error" in browser | Backend not running — check terminal for errors |
+| "Failed to fetch" | Verify `VITE_API_URL` in frontend `.env` is `http://localhost:8000` |
+| 500 error from API | Check backend terminal for error details — likely invalid API key or LLM error |
+| API calls failing silently | Check browser DevTools → Network tab for response details |
+
+---
+
+## Environment Files Reference
+
+### Backend `backend/.env.example`
+```env
+# Anthropic API Key (required)
+# Get yours at https://console.anthropic.com/
+ANTHROPIC_API_KEY=
+
+# CORS Allowed Origins (comma-separated)
+# For local development:
+ALLOWED_ORIGINS=http://localhost:5173
+```
+
+### Frontend `frontend/.env.example`
+```env
+# Backend API URL
+# For local development:
+VITE_API_URL=http://localhost:8000
+```
+
+---
+
+## Quick Reference
+```bash
+# First-time setup
+git clone <repository-url>
+cd flonp
+pnpm install                              # Install frontend + root deps
+
+cd backend
+uv venv --python 3.10                     # Create Python environment
+uv pip install -r requirements.txt        # Install backend deps
+cp .env.example .env                      # Create env file, add API key
+
+cd ../frontend
+cp .env.example .env                      # Create env file
+
+# Daily development
+cd flonp                                  # Repository root
+pnpm dev                                  # Start everything
+
+# After git pull
+pnpm install
+cd backend && uv pip install -r requirements.txt
+```

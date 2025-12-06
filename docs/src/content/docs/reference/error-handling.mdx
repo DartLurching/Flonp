@@ -1,0 +1,211 @@
+---
+title: Error Handling
+description: Error handling patterns across frontend, backend, and AI layers, including HTTP status codes, user messages, and recovery strategies.
+---
+
+## Overview
+
+This document describes how errors are handled across FLONP. It covers error types, how they propagate through the system, and what feedback users receive.
+
+---
+
+## Error Flow
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        ERROR SOURCES                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Frontend              Backend                 External        │
+│   ─────────             ───────                 ────────        │
+│   • Validation          • Validation            • Anthropic API │
+│   • Network             • AI processing                         │
+│   • Timeout             • Timeout                               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     ERROR HANDLING                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Frontend errors  → Inline messages or ErrorDisplay            │
+│   Backend errors   → Standardized JSON response                 │
+│   External errors  → Caught by backend, returned as 5xx         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      USER FEEDBACK                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   • Inline field errors (validation)                            │
+│   • ErrorDisplay component (API/network errors)                 │
+│   • Actionable messages with retry option                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Backend Error Format
+
+All backend errors follow this standardized structure:
+```json
+{
+  "error": "ERROR_CODE",
+  "message": "Human-readable message",
+  "details": {}
+}
+```
+
+---
+
+## Error Types
+
+### Frontend Errors
+
+| Error | Cause | Handling |
+|-------|-------|----------|
+| Validation | Invalid field value | Inline error below field |
+| Network | Cannot reach backend | ErrorDisplay with retry |
+| Timeout | Request exceeds 30s | ErrorDisplay with retry |
+
+### Backend Errors
+
+| Status | Error Code | Condition | Message |
+|--------|------------|-----------|---------|
+| 400 | `INVALID_REQUEST` | Malformed JSON or missing Content-Type header | "Request body must be valid JSON" |
+| 422 | `VALIDATION_ERROR` | Field value violates constraints | "Validation failed for one or more fields" |
+| 500 | `AI_PROCESSING_ERROR` | LLM failed to generate valid response | "AI processing failed. Please try again." |
+| 504 | `AI_TIMEOUT` | LLM request exceeded 60s timeout | "AI processing timed out. Please try again." |
+
+---
+
+## Backend Error Responses
+
+### 400 Bad Request
+
+**Trigger:** Malformed JSON or missing `Content-Type: application/json` header.
+```json
+{
+  "error": "INVALID_REQUEST",
+  "message": "Request body must be valid JSON",
+  "details": {}
+}
+```
+
+### 422 Unprocessable Entity
+
+**Trigger:** Field value outside valid range or invalid enum value.
+```json
+{
+  "error": "VALIDATION_ERROR",
+  "message": "Validation failed for one or more fields",
+  "details": {
+    "field": "lipid_concentration",
+    "constraint": "Must be between 10.0 and 50.0",
+    "value": 55.0
+  }
+}
+```
+
+### 500 Internal Server Error
+
+**Trigger:** LLM output could not be parsed after retry.
+```json
+{
+  "error": "AI_PROCESSING_ERROR",
+  "message": "AI processing failed. Please try again.",
+  "details": {}
+}
+```
+
+### 504 Gateway Timeout
+
+**Trigger:** Anthropic API did not respond within 60 seconds.
+```json
+{
+  "error": "AI_TIMEOUT",
+  "message": "AI processing timed out. Please try again.",
+  "details": {}
+}
+```
+
+---
+
+## Frontend Error Handling
+
+### Validation Errors
+
+- Handled by React Hook Form + Zod
+- Displayed inline below each field via `FormMessage`
+- Form submission blocked until resolved
+- No API call made
+
+### API Errors
+
+- Caught in `App.tsx` submit handler
+- Parse `error` and `message` from response
+- Display `message` in ErrorDisplay component
+- User can dismiss and retry
+
+### Network/Timeout Errors
+
+| Scenario | User Message |
+|----------|--------------|
+| Network failure | "Unable to connect to server." |
+| Frontend timeout (30s) | "Request timed out. Please try again." |
+
+---
+
+## User-Facing Messages
+
+| Error Code | User Message |
+|------------|--------------|
+| `INVALID_REQUEST` | "Invalid request. Please try again." |
+| `VALIDATION_ERROR` | "Validation error. Please check your inputs." |
+| `AI_PROCESSING_ERROR` | "Failed to generate recommendation. Please try again." |
+| `AI_TIMEOUT` | "AI processing timed out. Please try again." |
+| Network failure | "Unable to connect to server." |
+| Frontend timeout | "Request timed out. Please try again." |
+
+---
+
+## Retry Logic
+
+### Frontend
+
+- User-initiated only
+- Dismiss error, modify inputs if needed, resubmit
+- No automatic retry
+
+### Backend
+
+| Scenario | Retry? | Action |
+|----------|--------|--------|
+| Validation failure | No | Return 422 immediately |
+| LLM parse failure | Yes (once) | OutputFixingParser attempts repair |
+| LLM API error | No | Return 500 immediately |
+| LLM timeout | No | Return 504 immediately |
+
+---
+
+## ErrorDisplay Component Behavior
+
+| Aspect | Behavior |
+|--------|----------|
+| Visibility | Shown when `error` state is not null |
+| Styling | Red border/background to indicate error |
+| Content | Error message + Dismiss button |
+| Dismiss | Clears `error` state, hides component |
+| Position | Below form, above results (if any) |
+
+---
+
+## Timeout Configuration
+
+| Layer | Timeout | Purpose |
+|-------|---------|---------|
+| Frontend fetch | 30 seconds | Prevent UI hanging |
+| Backend → Anthropic | 60 seconds | Allow time for LLM processing |

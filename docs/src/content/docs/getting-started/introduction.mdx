@@ -1,0 +1,147 @@
+---
+title: Introduction
+description: An AI-powered web application that optimizes the synthesis of Lipid Nanoparticles (LNPs) using microfluidic technology.
+---
+
+## What is FLONP?
+
+**FLONP** (Flow + LNP) is an AI-powered web application that optimizes the synthesis of Lipid Nanoparticles (LNPs) using microfluidic technology. In simple terms, it's a digital assistant for scientists who need to figure out the best way to manufacture nanoscale drug delivery vehicles—the same technology behind mRNA vaccines like those from Pfizer and Moderna.
+
+The platform takes formulation inputs (what chemicals you're mixing, in what concentrations, under what conditions) and returns AI-generated recommendations for optimal manufacturing parameters, along with predictions about the resulting nanoparticle characteristics.
+
+---
+
+## The Problem We're Solving
+
+Manufacturing LNPs is notoriously finicky. Small changes in flow rates, buffer pH, or component ratios can mean the difference between a successful therapeutic and an unusable batch. Currently, researchers face a frustrating reality:
+
+**Trial and Error is Expensive**
+Each experimental run consumes specialized reagents—ionizable lipids can cost thousands of dollars per gram, and pharmaceutical-grade mRNA isn't cheap either. A typical optimization campaign might require 50-100 runs before finding acceptable parameters.
+
+**Knowledge Doesn't Transfer Well**
+When a senior scientist leaves a lab, their optimization intuition often leaves with them. New team members start from scratch, repeating mistakes that were already solved years ago.
+
+**The Science is Complex**
+The relationship between input parameters and output characteristics isn't linear or intuitive. Flow rate affects particle size, but so does buffer pH, lipid concentration, and the ratio between aqueous and organic phases—all interacting simultaneously.
+
+---
+
+## Our Solution
+
+FLONP addresses these challenges through a streamlined three-step workflow:
+
+```
+┌──────────────────┐          ┌──────────────────┐          ┌──────────────────┐
+│                  │          │                  │          │                  │
+│    INPUT FORM    │          │    AI ENGINE     │          │  RESULTS CARD    │
+│                  │          │                  │          │                  │
+│   • Lipid type   │   ───>   │ Analyzes inputs  │   ───>   │  • Flow rates    │
+│ • Concentrations │          │                  │          │  • Predictions   │
+│  • Buffer pH     │          │  Applies domain  │          │  • Scientific    │
+│  • N/P ratio     │          │      rules       │          │    reasoning     │
+│                  │          │                  │          │                  │
+└──────────────────┘          └──────────────────┘          └──────────────────┘
+```
+
+**Step 1: Enter Formulation Parameters**
+Users fill out a structured form specifying their organic phase (lipid composition, concentration), aqueous phase (payload type, RNA concentration, buffer), and process targets (N/P ratio).
+
+**Step 2: AI Processes the Request**
+The backend validates the inputs against physical constraints, then sends them to an AI engine powered by LangChain and Anthropic. The AI applies domain-specific logic rules derived from established LNP synthesis literature.
+
+**Step 3: Receive Optimized Protocol**
+Users get a "Formulation Protocol" card containing recommended flow rates, predicted particle characteristics (size, uniformity, encapsulation efficiency), and scientific reasoning explaining why these parameters were chosen.
+
+---
+
+## Who Is This For?
+
+### Primary Users
+**Process Development Scientists** at biotech and pharmaceutical companies working on mRNA therapeutics, gene therapies, or other nucleic acid-based medicines. These are the people who spend their days at the bench optimizing formulations.
+
+### Secondary Users
+**Academic Researchers** in nanomedicine, drug delivery, and pharmaceutical sciences. Often working with smaller budgets, they benefit enormously from reducing wasted experimental runs.
+
+### Tertiary Users
+**Contract Development Organizations (CDMOs)** that offer LNP formulation as a service. For them, faster optimization means faster turnaround for clients and better margins.
+
+---
+
+## Project Scope
+
+### This Project IS:
+- A functional vertical slice demonstrating end-to-end capability
+- A proof-of-concept for AI-assisted formulation optimization
+- A foundation for future feature development
+- A learning platform for interns to understand full-stack + ML integration
+
+### This Project IS NOT:
+- A production-ready commercial platform
+- A replacement for experimental validation
+- A database of historical formulations
+- A mobile application
+
+---
+
+## Technical Overview
+
+FLONP is built as a modern web application with clear separation of concerns:
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Frontend** | React + Vite + TypeScript | User interface and form handling |
+| **Styling** | Tailwind CSS + shadcn/ui | Professional, accessible components |
+| **Validation** | Zod (frontend) + Pydantic (backend) | Consistent data validation |
+| **API** | FastAPI (Python) | Request handling and orchestration |
+| **AI** | LangChain + Anthropic claude-3-5-haiku | Intelligent parameter optimization |
+| **Hosting** | Netlify (frontend) + Railway (backend) | Deployment infrastructure |
+
+The architecture is intentionally **stateless**—no database, no user accounts, no persistence. Each request is independent. This simplifies development and deployment while still demonstrating the core value proposition.
+
+---
+
+## Key Decisions
+
+Several important architectural and design decisions shape this project:
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| **No Database** | Stateless MVP | Reduces complexity, focuses demo on core functionality |
+| **claude-3-5-haiku** | Over Sonnet 4-5 | Sufficient reasoning capability at lower cost and latency |
+| **PydanticOutputParser** | For AI responses | Enforces strict JSON output, prevents formatting errors |
+| **shadcn/ui** | Over custom components | Professional look with minimal development time |
+| **Railway** | Over Render/Vercel | Better cold-start performance for Python backends |
+
+---
+
+## Quick Reference
+
+### The User Flow
+```
+User enters parameters → Frontend validates → API processes → AI generates → User sees results
+```
+
+### The Core Endpoint
+
+POST /optimize
+Content-Type: application/json
+
+```JSON
+{
+  "lipid_composition": "SM-102",
+  "lipid_concentration": 12.5,
+  "solvent_type": "Ethanol 99%",
+  "payload_type": "mRNA",
+  "payload_concentration": 0.1,
+  "buffer_type": "Citrate pH 4.0",
+  "target_np_ratio": 6
+}
+```
+
+### The AI's Job
+Take formulation inputs, apply physics-based reasoning, return optimized flow parameters and predictions in strict JSON format.
+
+### Success Looks Like
+- Request to results in under 5 seconds
+- 100% of AI responses are valid JSON
+- Zero invalid physics values accepted by the form

@@ -1,0 +1,253 @@
+---
+title: Complete Product Brief
+description: A comprehensive product brief for FLONP, a SaaS platform designed to optimize Lipid Nanoparticle (LNP) synthesis through microfluidic systems.
+---
+
+## Executive Summary
+
+**FLONP** is a SaaS platform designed to optimize Lipid Nanoparticle (LNP) synthesis through microfluidic systems. The platform enables researchers and process engineers to input formulation parameters and receive AI-generated recommendations for optimal flow conditions, predicted particle characteristics, and post-processing instructions.
+
+**Primary User Flow:**
+1. User enters lipid/RNA parameters in a 3-part form
+2. System validates constraints (pH, concentration limits) locally and on the server
+3. AI generates optimized flow rates and physics predictions based on established LNP logic
+4. User sees a "Formulation Protocol" card with scientific reasoning
+
+The core value proposition is reducing the trial-and-error cycles traditionally required in nanoparticle formulation by leveraging machine learning to predict outcomes based on established physicochemical relationships and accumulated experimental data.
+
+---
+
+## Problem Statement
+
+Lipid nanoparticle synthesis via microfluidics is a highly sensitive process where small variations in flow rates, buffer conditions, or component ratios can dramatically affect the final product quality. Currently, researchers face several challenges:
+
+1. **Iterative Experimentation**: Finding optimal process conditions typically requires dozens of experimental runs, consuming valuable reagents (mRNA, specialized lipids) and researcher time.
+
+2. **Knowledge Silos**: Process optimization knowledge often remains trapped in individual researchers' notebooks or institutional memory, making it difficult for new team members or collaborating labs to leverage existing insights.
+
+3. **Scale-Up Uncertainty**: Parameters that work at bench scale don't always translate to production scale, and predicting this translation requires deep expertise that isn't always available.
+
+4. **Quality Variability**: Without standardized parameter selection, batch-to-batch consistency becomes challenging, particularly for therapeutic applications where regulatory compliance demands reproducibility.
+
+---
+
+## Product Vision
+
+FLONP serves as an intelligent co-pilot for LNP formulation scientists. Rather than replacing expertise, it augments human decision-making by providing data-driven starting points and flagging potential issues before expensive experiments are run.
+
+### Target Users
+
+- **Primary**: Process Development Scientists at biotech/pharma companies working on mRNA therapeutics
+- **Secondary**: Academic researchers in nanomedicine and drug delivery
+- **Tertiary**: Contract Development and Manufacturing Organizations (CDMOs) offering LNP formulation services
+
+---
+
+## Core Functionality
+
+### Input Module — Formulation Parameters
+
+The platform accepts structured input across three categories:
+
+**A. Organic Phase Configuration**
+| Parameter | Type | Options/Range |
+|-----------|------|---------------|
+| Lipid Composition | Selection | SM-102, DOTAP/Cholesterol, Custom Ionizable Mix |
+| Lipid Concentration | Numeric | 10–50 mM |
+| Solvent | Fixed | Ethanol 99% (industry standard) |
+
+**B. Aqueous Phase Configuration**
+| Parameter | Type | Options/Range |
+|-----------|------|---------------|
+| Payload Type | Selection | mRNA, siRNA, pDNA, Empty (Control) |
+| RNA Concentration | Numeric | 0.05–1.0 mg/mL |
+| Aqueous Buffer | Selection | Citrate pH 4.0, Acetate pH 5.0, PBS pH 7.4 |
+
+**C. Process Targets**
+| Parameter | Type | Options/Range |
+|-----------|------|---------------|
+| Target N/P Ratio | Numeric | 4–20 |
+
+### Output Module — AI-Generated Recommendations
+
+Based on input parameters, the AI engine generates:
+
+| Output | Unit | Description |
+|--------|------|-------------|
+| Flow Rate Ratio (FRR) | Ratio | Aqueous-to-Organic volumetric ratio (e.g., 3:1) |
+| Total Flow Rate (TFR) | mL/min | Combined flow velocity through the chip |
+| Predicted Particle Size | nm | Expected hydrodynamic diameter |
+| Polydispersity Index (PDI) | Index | Uniformity metric (lower = better) |
+| Encapsulation Efficiency | % | Predicted RNA loading efficiency |
+| Post-Processing Notes | Text | Dialysis/buffer exchange recommendations |
+| Scientific Reasoning | Text | Explanation of parameter selection logic |
+
+---
+
+## API Contract
+
+### Request Schema (`POST /optimize`)
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `lipid_composition` | Enum | Yes | `['SM-102', 'DOTAP/Chol', 'Custom']` |
+| `lipid_concentration` | Float | Yes | `10.0` – `50.0` |
+| `solvent_type` | String | Yes | Fixed: `'Ethanol 99%'` |
+| `payload_type` | Enum | Yes | `['mRNA', 'siRNA', 'pDNA', 'Empty']` |
+| `payload_concentration` | Float | Yes | `0.05` – `1.0` |
+| `buffer_type` | Enum | Yes | `['Citrate pH 4.0', 'Acetate pH 5.0', 'PBS pH 7.4']` |
+| `target_np_ratio` | Integer | Yes | `4` – `20` |
+
+### Response Schema (`200 OK`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `flow_rate_ratio` | Float | Aqueous:Organic ratio (e.g., `3.0` → "3:1") |
+| `total_flow_rate` | Float | Combined flow in mL/min |
+| `particle_predicted_size` | Float | Hydrodynamic diameter (nm) |
+| `pdi` | Float | Polydispersity Index (0.05 – 0.50) |
+| `encapsulation_efficiency` | Float | Percentage (50.0 – 100.0) |
+| `post_process` | String | Dialysis/Buffer exchange instructions |
+| `reasoning` | String | Scientific justification for parameters |
+
+---
+
+## Technical Architecture
+
+### System Components
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     CLIENT LAYER (Netlify)                  │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │           React + Vite + TypeScript                  │   │
+│  │  • Tailwind CSS + shadcn/ui components               │   │
+│  │  • React Hook Form + Zod validation                  │   │
+│  │  • 3-section form (Organic/Aqueous/Target)           │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    API LAYER (Railway)                      │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              FastAPI + Python 3.10+                  │   │
+│  │  • Pydantic models (request/response validation)     │   │
+│  │  • CORS middleware configured                        │   │
+│  │  • POST /optimize endpoint                           │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      AI/ML LAYER                            │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │           LangChain + Anthropic claude-3-5-haiku     │   │
+│  │  • PydanticOutputParser (strict JSON enforcement)    │   │
+│  │  • OutputFixingParser (auto-fix formatting errors)   │   │
+│  │  • Domain-specific system prompt                     │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Note:** Stateless architecture — no database layer for MVP.
+
+### Technology Stack
+
+| Layer | Technology | Justification |
+|-------|------------|---------------|
+| Frontend | React + Vite + TypeScript | Fast HMR, modern tooling, type safety |
+| UI Components | Tailwind CSS + shadcn/ui | Professional, accessible, speeds up development |
+| Form Management | React Hook Form + Zod | Single schema definition, automatic error mapping |
+| Frontend Hosting | Netlify (Free Tier) | Easy deployment, automatic HTTPS |
+| Backend | Python 3.10+ + FastAPI | Async performance, automatic OpenAPI docs, Pydantic integration |
+| AI Integration | LangChain + Anthropic | Structured outputs, retry logic, prompt templating |
+| LLM Model | claude-3-5-haiku | Low cost, high speed, sufficient reasoning for formulation logic |
+| Backend Hosting | Railway (Dockerized) | No cold starts, easy Docker deployment for Python deps |
+
+### Architecture Decisions Log
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Frontend Style | shadcn/ui | Professional, pre-built accessible components speed up dev time significantly |
+| Backend Host | Railway | Avoids "cold starts" better than Render; easier Docker deployment for Python deps |
+| AI Model | claude-3-5-haiku | Low cost, high speed, sufficient reasoning capability for formulation logic |
+| Data Parsing | PydanticOutputParser | Forces LLM to return strict JSON, preventing formatting errors |
+| State Management | None (stateless) | MVP simplicity, no persistence needed for vertical slice |
+
+---
+
+## MVP Scope — Vertical Slice
+
+The initial deliverable focuses on demonstrating end-to-end functionality rather than feature completeness.
+
+### In Scope (MVP)
+- Single-page form interface for all input parameters (3-section form)
+- Backend API with Pydantic validation
+- AI integration generating all output fields with scientific reasoning
+- "Formulation Protocol" results card display
+- Loading states and error handling
+- CORS configuration for cross-origin requests
+
+### Out of Scope (MVP)
+- Database/Persistence (Stateless architecture)
+- User authentication and accounts
+- Mobile responsiveness (Desktop-first)
+- Batch processing / multiple formulations
+- Export functionality (PDF reports, CSV)
+- Integration with lab equipment APIs
+
+---
+
+## Success Criteria
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| End-to-end latency | < 5 seconds | Time from form submission to results display |
+| AI response validity | 100% parseable | All AI responses conform to expected JSON schema (no markdown/text leakage) |
+| Input validation | 100% coverage | Impossible physics (negative concentrations, out-of-range values) blocked before API call |
+| Code documentation | > 80% | Functions and modules documented for intern onboarding |
+
+---
+
+## Delivery
+
+**The Engine (Backend)**
+- Git repo setup, Virtual Environment, FastAPI skeleton
+- Implement `FormulationRequest` and `FormulationResponse` Pydantic models
+- AI Integration: LangChain + `PydanticOutputParser` + `OutputFixingParser`
+- Create `POST /optimize` endpoint with system prompt
+- Testing: Verify API returns valid JSON via curl/Postman
+
+**The Interface (Frontend)**
+- Vite + React + Tailwind + shadcn/ui setup
+- Install shadcn components: Form, Select, Input, Card, Button
+- Create Zod schema matching Pydantic backend schema
+- Fetch integration with loading states
+- Render "Formulation Protocol" results card
+
+---
+
+## Risk Assessment
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| **LLM Formatting Failures** | Medium | High | LLM returns text instead of JSON. Use LangChain's `PydanticOutputParser` with `OutputFixingParser` to auto-fix formatting |
+| **Frontend Forms Tedious** | High | Medium | Wiring 8 inputs with validation takes longer than expected. Use `react-hook-form` + `zod` — define schema once, form handles all error mapping |
+| **CORS Issues** | High | Medium | Frontend (Netlify) can't talk to Backend (Railway). Add `CORSMiddleware` allowing `["*"]` for MVP |
+| **Scope Creep** | High | Medium | Strict MVP definition, feature backlog for v2 |
+| **Domain Knowledge Gaps** | Medium | Medium | Regular consultation with nanotechnology SME |
+
+---
+
+## Appendix: Glossary
+
+| Term | Definition |
+|------|------------|
+| LNP | Lipid Nanoparticle — spherical vesicle used to deliver RNA therapeutics |
+| Microfluidics | Technology using micro-scale channels for precise fluid mixing |
+| FRR | Flow Rate Ratio — volumetric ratio of aqueous to organic phase |
+| TFR | Total Flow Rate — combined flow velocity through the system |
+| N/P Ratio | Nitrogen-to-Phosphate ratio — charge balance between lipid and RNA |
+| PDI | Polydispersity Index — measure of particle size uniformity |
+| Encapsulation Efficiency | Percentage of RNA successfully loaded into nanoparticles |

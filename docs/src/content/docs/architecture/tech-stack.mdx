@@ -1,0 +1,226 @@
+---
+title: Tech Stack
+description: Complete technology stack definition for FLONP, including frontend, backend, AI/ML layer, and development tools.
+---
+
+## Overview
+
+This document defines the complete technology stack for FLONP.
+
+The stack prioritizes: developer productivity, type safety, fast iteration, and minimal operational complexity.
+
+---
+
+## Frontend
+
+| Technology | Version | Purpose | Rationale |
+|------------|---------|---------|-----------|
+| **React** | 19.x | UI framework | Industry standard, large ecosystem, familiarity likely |
+| **Vite** | 7.2.x | Build tool | Fast HMR, modern defaults, simpler config than Webpack |
+| **TypeScript** | 5.x | Type system | Catches errors at compile time, improves code documentation |
+| **Tailwind CSS** | 4.x | Styling | Utility-first approach speeds up UI development, no CSS file management |
+| **shadcn/ui** | latest | Component library | Pre-built accessible components, copy-paste model allows customization |
+| **React Hook Form** | 7.x | Form management | Minimal re-renders, native validation integration, simple API |
+| **Zod** | 4.x | Schema validation | TypeScript-first, integrates directly with React Hook Form via resolver |
+
+### Frontend Hosting
+
+| Service | Purpose | Rationale |
+|---------|---------|-----------|
+| **Netlify** (Free Tier) | Static hosting + CDN | Zero-config deploys from Git, automatic HTTPS, generous free tier |
+
+### Key Frontend Dependencies
+```json
+{
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.0.0",
+    "@hookform/resolvers": "^5.0.0",
+    "zod": "^4.0.0",
+    "lucide-react": "^0.555.0",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^7.2.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/vite": "^4.0.0"
+  }
+}
+```
+
+---
+
+## Backend
+
+| Technology | Version | Purpose | Rationale |
+|------------|---------|---------|-----------|
+| **Python** | 3.10 | Runtime | Modern features (type hints, match statements), LangChain compatibility |
+| **FastAPI** | 0.123.x | Web framework | Async by default, automatic OpenAPI docs, native Pydantic integration |
+| **Pydantic** | 2.12.x | Data validation | Strict typing, automatic JSON parsing, shared model definitions |
+| **Uvicorn** | 0.38.x | ASGI server | High performance, standard FastAPI deployment |
+
+### Backend Hosting
+
+| Service | Purpose | Rationale |
+|---------|---------|-----------|
+| **Railway** | Container hosting | No cold starts (unlike Render free tier), easy Docker deployment, simple environment variable management |
+
+### Key Backend Dependencies
+```txt
+# requirements.txt
+fastapi==0.123.9
+uvicorn[standard]==0.38.0
+pydantic==2.12.5
+python-dotenv==1.2.1
+langchain==1.1.2
+langchain-anthropic==1.2.0
+```
+
+---
+
+## AI/ML Layer
+
+| Technology | Version | Purpose | Rationale |
+|------------|---------|---------|-----------|
+| **LangChain** | 1.1.x | LLM orchestration | Prompt templating, output parsing, retry logic built-in |
+| **langchain-anthropic** | 1.2.x | Anthropic integration | Official LangChain package for Claude models |
+| **Anthropic API** | — | LLM provider | Claude models |
+| **claude-3-5-haiku** | latest | Model selection | Fast responses, cost-effective, sufficient reasoning for formulation logic |
+
+### LangChain Components Used
+
+| Component | Purpose |
+|-----------|---------|
+| `ChatAnthropic` | LLM client wrapper for Claude |
+| `ChatPromptTemplate` | System + human prompt construction |
+| `PydanticOutputParser` | Forces LLM to return structured JSON matching Pydantic model |
+| `OutputFixingParser` | Auto-retries with correction prompt if initial parse fails |
+
+---
+
+## Development Tools
+
+| Tool | Version | Purpose | Required |
+|------|---------|---------|----------|
+| **Node.js** | 24.11.1 LTS | Frontend runtime | Yes |
+| **pnpm** | 10.x | Package manager | Yes |
+| **Python** | 3.10 | Backend runtime | Yes |
+| **uv** | 0.9.15 | Python package manager | Yes |
+| **Git** | latest | Version control | Yes |
+| **VS Code** | latest | Recommended IDE | No (but recommended) |
+| **Docker** | latest | Backend containerization (for Railway deployment) | For deployment only |
+
+### Why pnpm over npm?
+
+- Faster installs via content-addressable storage
+- Stricter dependency resolution (avoids phantom dependencies)
+- Disk space efficient (shared packages across projects)
+
+### Why uv over pip?
+
+- 10-100x faster package installation
+- Built-in virtual environment management
+- Drop-in replacement for pip commands
+- Written in Rust, minimal dependencies
+
+### Recommended VS Code Extensions
+```json
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff"
+  ]
+}
+```
+
+---
+
+## Version Reference
+
+| Component | Version |
+|-----------|---------|
+| Node.js | 24.11.1 LTS |
+| pnpm | 10.x |
+| Python | 3.10 |
+| uv | 0.9.15 |
+| React | 19.x |
+| Vite | 7.2.x |
+| TypeScript | 5.x |
+| Tailwind CSS | 4.x |
+| Zod | 4.x |
+| React Hook Form | 7.x |
+| FastAPI | 0.123.x |
+| Pydantic | 2.12.x |
+| Uvicorn | 0.38.x |
+| LangChain | 1.1.x |
+| langchain-anthropic | 1.2.x |
+
+---
+
+## Environment Variables
+
+Both frontend and backend require environment configuration.
+
+### Backend (.env)
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude | `sk-ant-...` |
+| `ALLOWED_ORIGINS` | CORS allowed origins (comma-separated) | `http://localhost:5173,https://flonp.netlify.app` |
+
+### Frontend (.env)
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `VITE_API_URL` | Backend API base URL | `http://localhost:8000` (dev) or `https://flonp-api.railway.app` (prod) |
+
+> **Security Note:** Never commit `.env` files to version control. Both `.gitignore` files must include `.env`.
+
+> **API Key:** Each developer must create their own Anthropic account and generate an API key at https://console.anthropic.com/. See DEVELOPMENT_SETUP.md for instructions.
+
+---
+
+## What's NOT in the Stack
+
+These technologies were considered but explicitly excluded:
+
+| Technology | Reason for Exclusion |
+|------------|----------------------|
+| Next.js | SSR/SSG unnecessary for this SPA; adds complexity |
+| Redux / Zustand | No complex state management needed; form state handled by React Hook Form |
+| PostgreSQL / SQLite | MVP is stateless; no persistence required |
+| Docker Compose | Single backend service; no orchestration needed locally |
+| Jest / Pytest | Testing deferred to 3-month plan; MVP prioritizes speed |
+| Axios | Native `fetch` sufficient for single endpoint |
+| npm / pip | pnpm and uv are faster, stricter, and more efficient |
+
+---
+
+## Quick Reference Card
+```
+┌─────────────────────────────────────────────────────────┐
+│                    FLONP TECH STACK                     │
+├─────────────────────────────────────────────────────────┤
+│  FRONTEND          │  BACKEND          │  AI            │
+│  ─────────         │  ───────          │  ──            │
+│  React 19          │  Python 3.10      │  LangChain 1.1 │
+│  Vite 7.2          │  FastAPI 0.123    │  Anthropic     │
+│  TypeScript 5      │  Pydantic 2.12    │  Claude 3.5    │
+│  Tailwind 4        │  Uvicorn 0.38     │    Haiku       │
+│  shadcn/ui         │                   │                │
+│  React Hook Form 7 │                   │                │
+│  Zod 4             │                   │                │
+├─────────────────────────────────────────────────────────┤
+│  TOOLS: pnpm 10 + uv 0.9.15                             │
+│  HOSTING: Netlify (frontend) + Railway (backend)        │
+└─────────────────────────────────────────────────────────┘
+```
