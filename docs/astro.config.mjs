@@ -28,7 +28,10 @@ export default defineConfig({
 				},
 				{
 					label: 'Guides',
-					autogenerate: { directory: 'guides' },
+					items: [
+						{ label: 'Development Setup', slug: 'guides/development-setup' },
+						{ label: 'Deployment Guide', slug: 'guides/deployment-guide' },
+					],
 				},
 				{
 					label: 'Reference',
