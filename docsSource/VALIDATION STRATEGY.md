@@ -1,0 +1,151 @@
+# FLONP — Validation Strategy
+
+## Overview
+
+This document describes how validation is implemented across FLONP. Validation occurs at two layers: frontend (Zod) and backend (Pydantic). Both layers enforce the same rules to ensure data integrity and provide appropriate user feedback.
+
+---
+
+## Validation Layers
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      USER INPUT                                 │
+└─────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 FRONTEND VALIDATION (Zod)                       │
+│                                                                 │
+│   • Runs on blur and submit                                     │
+│   • Provides instant feedback                                   │
+│   • Prevents invalid API calls                                  │
+│   • Displays inline error messages                              │
+│                                                                 │
+│   ├─── Invalid → Show error, block submission                   │
+│   └─── Valid   → Send to API                                    │
+└─────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 BACKEND VALIDATION (Pydantic)                   │
+│                                                                 │
+│   • Runs on every request                                       │
+│   • Never trusts client data                                    │
+│   • Returns 422 with field details on failure                   │
+│   • Final authority on data validity                            │
+│                                                                 │
+│   ├─── Invalid → Return 422 Unprocessable Entity                │
+│   └─── Valid   → Process request                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Why Dual Validation?
+
+| Layer | Purpose |
+|-------|---------|
+| **Frontend (Zod)** | User experience — instant feedback, no wasted API calls |
+| **Backend (Pydantic)** | Security — never trust client, enforce constraints server-side |
+
+Both are required. Frontend-only validation can be bypassed. Backend-only validation provides slow feedback.
+
+---
+
+## Validation Rules
+
+### Request Field Constraints
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `lipid_composition` | enum | Yes | `SM-102`, `DOTAP/Chol`, `Custom` |
+| `lipid_concentration` | float | Yes | 10.0 ≤ value ≤ 50.0 |
+| `solvent_type` | literal | Yes | Must be `Ethanol 99%` |
+| `payload_type` | enum | Yes | `mRNA`, `siRNA`, `pDNA`, `Empty` |
+| `payload_concentration` | float | Yes | 0.0 ≤ value ≤ 1.0 |
+| `buffer_type` | enum | Yes | `Citrate pH 4.0`, `Acetate pH 5.0`, `PBS pH 7.4` |
+| `target_np_ratio` | integer | Yes | 4 ≤ value ≤ 20 |
+
+> **Note:** `payload_concentration` allows `0.0` to support control experiments when `payload_type` is `Empty`.
+
+### Response Field Constraints
+
+| Field | Type | Constraints |
+|-------|------|-------------|
+| `flow_rate_ratio` | float | 1.0 ≤ value ≤ 10.0 |
+| `total_flow_rate` | float | 1.0 ≤ value ≤ 30.0 |
+| `particle_predicted_size` | float | 30.0 ≤ value ≤ 300.0 |
+| `pdi` | float | 0.01 ≤ value ≤ 0.50 |
+| `encapsulation_efficiency` | float | 50.0 ≤ value ≤ 100.0 |
+| `post_process` | string | Non-empty |
+| `reasoning` | string | Non-empty |
+
+---
+
+## Schema Locations
+
+| Layer | Location |
+|-------|----------|
+| Frontend (Zod) | `src/lib/schemas.ts` |
+| Backend (Pydantic) | `app/models.py` |
+
+**Important:** When changing validation rules, update both schemas simultaneously.
+
+---
+
+## Error Messages
+
+### Frontend Messages (User-Friendly)
+
+| Rule | Message |
+|------|---------|
+| Required field empty | "Required" |
+| Number out of range | "Must be between {min} and {max}" |
+| Invalid integer | "Must be a whole number" |
+
+### Backend Messages (Pydantic Defaults)
+
+| Rule | Message |
+|------|---------|
+| Missing field | `Field required` |
+| Below minimum | `Input should be greater than or equal to {min}` |
+| Above maximum | `Input should be less than or equal to {max}` |
+| Invalid enum | `Input should be '{option1}', '{option2}' or '{option3}'` |
+
+---
+
+## Validation Timing
+
+### Frontend
+
+| Event | Action |
+|-------|--------|
+| Field blur | Validate single field |
+| Form submit | Validate all fields, block if invalid |
+
+### Backend
+
+| Event | Action |
+|-------|--------|
+| Request received | Validate entire body |
+| Validation fails | Return 422, do not process |
+
+---
+
+## Response Validation
+
+The AI-generated response is validated before returning to the frontend.
+```
+LLM returns response
+       │
+       ▼
+PydanticOutputParser validates against FormulationResponse
+       │
+       ├─── Valid → Return to frontend
+       │
+       └─── Invalid → OutputFixingParser attempts repair
+                          │
+                          ├─── Repaired → Return to frontend
+                          │
+                          └─── Still invalid → Return 500 error
+```
