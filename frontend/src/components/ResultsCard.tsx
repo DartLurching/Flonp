@@ -19,7 +19,7 @@ function ResultItem({ label, value, unit, icon, highlight }: ResultItemProps) {
     <div className={`flex items-center gap-3 p-4 rounded-lg transition-all duration-200 ${
       highlight ? 'bg-accent/50 border border-accent-foreground/10' : 'bg-muted/50'
     }`}>
-      <div className="flex-shrink-0 w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+      <div className="shrink-0 w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
@@ -121,7 +121,7 @@ export function ResultsCard({ result }: ResultsCardProps) {
         {/* AI Reasoning */}
         <div className="p-4 rounded-lg border border-border bg-card">
           <div className="flex items-start gap-2 mb-2">
-            <Info className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+            <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
             <h4 className="text-sm font-semibold text-foreground">
               Scientific Reasoning
             </h4>

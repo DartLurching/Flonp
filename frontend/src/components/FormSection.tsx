@@ -27,7 +27,7 @@ export function FormSection({
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-start gap-3 mb-5">
-        <div className="flex-shrink-0 w-10 h-10 rounded-lg gradient-header flex items-center justify-center text-primary-foreground">
+        <div className="shrink-0 w-10 h-10 rounded-lg gradient-header flex items-center justify-center text-primary-foreground">
           {icon}
         </div>
         <div>
