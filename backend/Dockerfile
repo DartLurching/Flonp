@@ -17,13 +17,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir uv
 
 # Copy requirements first (Docker layer caching)
-COPY requirements.txt .
+COPY backend/requirements.txt .
 
 # Install Python dependencies
 RUN uv pip install --system --no-cache -r requirements.txt
 
 # Copy application code
-COPY app/ ./app/
+COPY backend/app/ ./app/
 
 # Expose port (Railway uses PORT env variable)
 EXPOSE 8000
