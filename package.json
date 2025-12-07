@@ -1,0 +1,28 @@
+{
+  "name": "flonp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FLONP - AI-powered web application for optimizing Lipid Nanoparticle synthesis using microfluidic technology",
+  "scripts": {
+    "dev": "pnpm run --parallel dev:frontend dev:backend dev:docs",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "uv run --directory backend uvicorn app.main:app --reload --port 8000",
+    "dev:docs": "pnpm --filter docs dev",
+    "build": "pnpm --filter frontend build && pnpm --filter docs build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:docs": "pnpm --filter docs build",
+    "preview:frontend": "pnpm --filter frontend preview",
+    "preview:docs": "pnpm --filter docs preview"
+  },
+  "keywords": [
+    "lnp",
+    "lipid-nanoparticles",
+    "microfluidics",
+    "ai",
+    "optimization",
+    "langchain",
+    "fastapi"
+  ],
+  "author": "",
+  "license": "ISC"
+}
